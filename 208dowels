@@ -1,0 +1,196 @@
+#! /usr/bin/python3
+
+import sys
+from math import *
+import time
+#from Binomial import binomialEqual, binomialGreaterEqual, binomialLowerEqual
+#from Chisquare import chisquare
+
+tab = [
+	[0, 0.02, 0.06, 0.15, 0.27, 0.45, 0.71, 1.07, 1.54, 2.71, 3.84, 5.41, 6.63],
+	[0.02, 0.21, 0.45, 0.71, 1.02, 1.39, 1.83, 2.41, 3.22, 4.61, 5.99, 7.82, 9.21],
+	[0.11, 0.58, 1.01, 1.42, 1.87, 2.37, 2.95, 3.66, 4.64, 6.25, 7.81, 9.84, 11.34],
+	[0.3, 1.06, 1.65, 2.19, 2.75, 3.36, 4.04, 4.88, 5.99, 7.78, 9.49, 11.67, 13.28],
+	[0.55, 1.61, 2.34, 3.00, 3.66, 4.35, 5.13, 6.06, 7.29, 9.24, 11.07, 13.39, 15.09],
+	[0.87, 2.2, 3.07, 3.83, 4.57, 5.35, 6.21, 7.23, 8.56, 10.64, 12.59, 15.03, 16.81],
+	[1.24, 2.83, 3.82, 4.67, 5.49, 6.35, 7.28, 8.38, 9.8, 12.02, 14.07, 16.62, 18.48],
+	[1.65, 3.49, 4.59, 5.53, 6.42, 7.34, 8.35, 9.52, 11.03, 13.36, 15.51, 18.17, 20.09],
+	[2.09, 4.17, 5.38, 6.39, 7.36, 8.34, 9.41, 10.66, 12.24, 14.68, 16.92, 19.68, 21.67],
+	[2.56, 4.87, 6.18, 7.27, 8.3, 9.34, 10.47, 11.78, 13.44, 15.99, 18.31, 21.16, 23.21]
+]
+tab_degrees = [99, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5, 2, 1]
+
+
+def print_usage():
+    print("USAGE\n\t./208dowels O0 O1 O2 O3 O4 O5 O6 O7 O8\n\n")
+    print("DESCRIPTION\n\tOi\tsize of the observed class")
+    
+
+def inspect_arg():
+    i = 1
+    while i in range(9):
+        if int(sys.argv[i]) < 0:
+            return False
+        i += 1
+    return True
+
+def chisquare(obs: [float], exp: [float]) -> float:
+    assert len(obs) == len(exp)
+    sum = 0
+    for i in range (0, len(obs)):
+        sum += (pow(obs[i] - exp[i], 2) / exp[i])
+    return (sum)
+
+def coefficientBinomial(n: float, k:float) -> float:
+	a = factorial(n)
+	b = factorial(k) * factorial(n - k)
+	return (a / b)
+
+def binomialEqual(n: float, p: float, k: float) -> float:
+	coeff = coefficientBinomial(n, k)
+	tmp = pow(p, k) * pow(1 - p, n - k)
+	return (tmp * coeff)
+
+def binomialGreaterEqual(n: float, p: float, k: float) -> float:
+	sum = 0
+	for i in range(k, n):
+		sum += binomialEqual(n, p, i)
+	return (sum)
+
+def binomialLowerEqual(n: float, p: float, k: float) -> float:
+	sum = 0
+	for i in range(0, k + 1):
+		sum += binomialEqual(n, p, i)
+	return (sum)
+    
+def computeOx(args):
+    values = []
+    i = len(args)
+
+    for value in reversed(args):
+        if (len(values) != 0 and int(values[-1]["quantity"]) < 10):
+            values[-1]["quantity"] = int(values[-1]["quantity"]) + int(value)
+        else:
+            values.append({"index" : i - 1, "quantity" : value})
+        i -= 1
+    if len(values) >= 2:
+        values[0]["index"] = int(values[1]["index"]) + 1
+    values.reverse()
+    i = 0
+    while int(values[i]["quantity"]) < 10 and i != len(values) - 1:
+        values[i + 1]["quantity"] = int(values[i + 1]["quantity"]) + int(values[i]["quantity"])
+        i += 1
+    values = values[i:]
+    return values
+
+def computeTotal(arr):
+    total = 0
+
+    for i in arr:
+        total += int(i["quantity"])
+    return total
+
+def computeProbability(vals, total):
+    p = 0
+    for i, item in enumerate(vals):
+        p += ((i / total) * int(item))
+    return p / 100
+
+def printFirstLine(arr):
+    print("   x\t", end='')
+    for i in range(0, len(arr)):
+        item = arr[i]
+        print("| ", end='')
+        if i == 0 and item["index"] != 0:
+            print("0-{}".format(item["index"]), end='')
+        elif i == len(arr) - 1:
+            print("{}+".format(item["index"]), end='')
+        elif i != 0 and arr[i - 1]["index"] + 1 != item["index"]:
+            print("{}-{}".format(arr[i - 1]["index"] + 1, item["index"]), end='')
+        else:
+            print("{}".format(item["index"]), end='')
+        print("\t", end='')
+    print("| Total")
+
+def printSecondLine(arr, tot, p):
+    sum = 0
+
+    print("  Ox\t", end='')
+    for i in range(0, len(arr)):
+        item = arr[i]
+        print("| {}\t".format(item["quantity"]), end='')
+        sum += int(item["quantity"])
+    print("| {}".format(sum))
+
+def printThirdLine(arr, total, p):
+    sum = 0
+    print("  Tx\t", end='')
+    for i in range(0, len(arr)):
+        item = arr[i]
+        print("| ", end='')
+        if i == 0 :
+            value = binomialLowerEqual(total, p, item["index"])
+        elif i != 0 and arr[i - 1]["index"] + 1 != item["index"]:
+            value = binomialLowerEqual(total, p, item["index"])	- binomialLowerEqual(total, p, arr[i - 1]["index"])
+        elif i == len(arr) - 1:
+            value = binomialGreaterEqual(total, p, item["index"])
+        else:
+            value = binomialEqual(total, p, item["index"])
+        value = value * total
+        sum += value
+        print("{}".format(round(value, 1)), end='')
+        item["theorical"] = value
+        print("\t", end='')
+    print("| {}".format(int(round(sum, 1))))
+
+def print_tab(arr, total ,p):
+    sum = 0
+    printFirstLine(arr)
+    printSecondLine(arr, total, p)
+    printThirdLine(arr, total, p)
+
+
+def run():
+    val = sys.argv[1:]
+    if inspect_arg() == False:
+        exit(84)
+    arr = computeOx(val)
+    tot = computeTotal(arr)
+    if tot != 100:
+        exit(84)
+    p = computeProbability(val, tot)
+    print_tab(arr, tot, p)
+    print("Distribution:\t\tB(%d, %.4f)" % (tot, round(p, 4)))
+    obs = [float(item["quantity"]) for item in arr]
+    exp = [float(item["theorical"]) for item in arr]
+    chi = chisquare(obs, exp)
+    print("Chi-squared:\t\t%.3f" % (round(chi, 3)))
+    degree = len(arr) - 2
+    print("Degrees of freedom:\t%d" % (len(arr) - 2))
+    print("Fit validity:\t\t", end='')
+    if chi < tab[degree - 1][0]:
+        print("P > 99%")
+    elif chi > tab[degree - 1][-1]:
+        print("P < 1%")
+    else:
+        min = 1
+        max = 0
+        for i in range(0 ,len(tab[degree - 1]) - 1):
+            if chi <= tab[degree - 1][i + 1] and chi >= tab[degree - 1][i]:
+                min = i + 1
+                max = i
+        print("{}% < P < {}%".format(tab_degrees[min], tab_degrees[max]))
+
+def main():
+    if len(sys.argv) == 2:
+        if (sys.argv[1] == "-h"):
+            print_usage()
+            exit(0)
+    elif len(sys.argv) == 10:
+        run()
+    else:
+        exit(84)
+
+
+if __name__ == "__main__":
+    main()  
